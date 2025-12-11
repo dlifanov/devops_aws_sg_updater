@@ -184,18 +184,18 @@ tmp=$(mktemp)
 } > "$tmp" && mv "$tmp" template.yaml
 
 
-GIT_REMOTE="https://github.com/dlifanov/devops_aws_sg_updater"
+GIT_REMOTE_URL="git@github.com:dlifanov/devops_aws_sg_updater.git"
 GIT_BRANCH="main"
 GIT_DIR="."
 
-git -C "$GIT_DIR" remote set-url "$GIT_REMOTE" git@github.com:dlifanov/devops_aws_sg_updater.git
+git -C "$GIT_DIR" remote set-url "$GIT_REMOTE_NAME" "$GIT_REMOTE_URL"
 
 if git -C "$GIT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if ! git -C "$GIT_DIR" diff --quiet -- template.yaml; then
     git -C "$GIT_DIR" add template.yaml
     git -C "$GIT_DIR" commit -m "Update template.yaml from security group sync"
     GIT_SSH_COMMAND="ssh -i $SSH_KEY -o IdentitiesOnly=yes" \
-      git -C "$GIT_DIR" push "$GIT_REMOTE" "$GIT_BRANCH"
+      git -C "$GIT_DIR" push "$GIT_REMOTE_NAME" "$GIT_BRANCH"
   else
     echo "template.yaml unchanged; skipping commit/push."
   fi
