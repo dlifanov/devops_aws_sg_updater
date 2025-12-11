@@ -51,9 +51,6 @@ mapfile -t SG_HTTP < <(
   | sed '/^$/d'
 )
 printf 'Cloudflare range: %s\n' "${CF_ALLOWED[@]}"
-# printf 'HTTP_TEMPLATE: %s\n' "${HTTP_TEMPLATE[@]}"
-# printf 'SSH_TEMPLATE: %s\n' "${SSH_TEMPLATE[@]}"
-# printf 'SG_HTTP: %s\n' "${SG_HTTP[@]}"
 
 ALLOWED=()
 while IFS= read -r cidr; do
@@ -62,8 +59,6 @@ done < <(
   printf '%s\n' "${CF_ALLOWED[@]}" "${HTTP_TEMPLATE[@]}" "$HOME_IP" |
     sed '/^$/d' | sort -u
 )
-
-# printf 'ALLOWED: %s\n' "${ALLOWED[@]}"
 
 # Dedup both lists
 mapfile -t SG_HTTP <<<"$(printf '%s\n' "${SG_HTTP[@]}" | sed '/^$/d' | sort -u)"
@@ -152,15 +147,15 @@ for cidr in "${TO_ADD_SSH[@]}"; do
     --cidr "$cidr"
 done
 
-# for cidr in "${TO_DELETE_SSH[@]}"; do
-#   [[ -z "$cidr" ]] && continue
-#   aws ec2 revoke-security-group-ingress \
-#     --region "$REGION" \
-#     --group-name "$SG_NAME" \
-#     --protocol tcp \
-#     --port 22 \
-#     --cidr "$cidr"
-# done
+for cidr in "${TO_DELETE_SSH[@]}"; do
+  [[ -z "$cidr" ]] && continue
+  aws ec2 revoke-security-group-ingress \
+    --region "$REGION" \
+    --group-name "$SG_NAME" \
+    --protocol tcp \
+    --port 22 \
+    --cidr "$cidr"
+done
 
 ALLOWED_HTTP_B64=$(printf '%s\n' "${ALLOWED[@]}"      | base64 | tr -d '\n')
 ALLOWED_SSH_B64=$(printf '%s\n' "${ALLOWED_SSH[@]}"   | base64 | tr -d '\n')
@@ -175,36 +170,32 @@ while IFS= read -r cidr; do [[ -n "$cidr" ]] && ALLOWED_HTTP+=("$cidr"); done <<
 ALLOWED_SSH=()
 while IFS= read -r cidr; do [[ -n "$cidr" ]] && ALLOWED_SSH+=("$cidr"); done <<<"$(printf '%s' "$ALLOWED_SSH_B64" | base64 -d)"
 
-printf 'ALLOWED_HTTP: %s\n' "${ALLOWED_HTTP[@]}"
-printf 'ALLOWED_SSH: %s\n' "${ALLOWED_SSH[@]}"
+NAME=$(awk -F: '/^name:[[:space:]]*/{sub(/^name:[[:space:]]*/,"");print; exit}' template.yaml)
+: "${NAME:=security-group}"
 
- NAME=$(awk -F: '/^name:[[:space:]]*/{sub(/^name:[[:space:]]*/,"");print; exit}' template.yaml)
-  : "${NAME:=security-group}"
-
-  tmp=$(mktemp)
-  {
-    printf 'name: %s\n' "$NAME"
-    printf 'rules:\n'
-    printf '  ssh:\n'
-    printf '  - %s\n' "${ALLOWED_SSH[@]}"
-    printf '  http:\n'
-    printf '  - %s\n' "${ALLOWED_HTTP[@]}"
-  } > "$tmp" && mv "$tmp" template.yaml
+tmp=$(mktemp)
+{
+  printf 'name: %s\n' "$NAME"
+  printf 'rules:\n'
+  printf '  ssh:\n'
+  printf '  - %s\n' "${ALLOWED_SSH[@]}"
+  printf '  http:\n'
+  printf '  - %s\n' "${ALLOWED_HTTP[@]}"
+} > "$tmp" && mv "$tmp" template.yaml
 
 
 GIT_REMOTE="https://github.com/dlifanov/devops_aws_sg_updater"
 GIT_BRANCH="main"
 GIT_DIR="."
 
-if git -C "$GIT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  git -C "$GIT_DIR" fetch "$GIT_REMOTE" "$GIT_BRANCH" --prune
-  git -C "$GIT_DIR" checkout "$GIT_BRANCH"
-  git -C "$GIT_DIR" pull --rebase "$GIT_REMOTE" "$GIT_BRANCH"
+git -C "$GIT_DIR" remote set-url "$GIT_REMOTE" git@github.com:dlifanov/devops_aws_sg_updater.git
 
+if git -C "$GIT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if ! git -C "$GIT_DIR" diff --quiet -- template.yaml; then
     git -C "$GIT_DIR" add template.yaml
     git -C "$GIT_DIR" commit -m "Update template.yaml from security group sync"
-    git -C "$GIT_DIR" push "$GIT_REMOTE" "$GIT_BRANCH"
+    GIT_SSH_COMMAND="ssh -i $SSH_KEY -o IdentitiesOnly=yes" \
+      git -C "$GIT_DIR" push "$GIT_REMOTE" "$GIT_BRANCH"
   else
     echo "template.yaml unchanged; skipping commit/push."
   fi
