@@ -183,7 +183,7 @@ tmp=$(mktemp)
   printf '  - %s\n' "${ALLOWED_HTTP[@]}"
 } > "$tmp" && mv "$tmp" template.yaml
 
-
+GIT_REMOTE_NAME="origin"
 GIT_REMOTE_URL="git@github.com:dlifanov/devops_aws_sg_updater.git"
 GIT_BRANCH="main"
 GIT_DIR="."
