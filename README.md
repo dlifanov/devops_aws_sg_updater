@@ -11,10 +11,9 @@ Small helper to sync HTTP/SSH CIDRs in an AWS security group with a YAML templat
 - Commits and pushes `template.yaml` if it changed.
 
 ## Prerequisites
-- `ssh` access to `user3@2bcloud.io` with a working key.
 - Tools: `aws`, `jq`, `curl`, `base64`, `git`.
 - AWS IAM permissions to describe/modify the target security group.
-- GitHub access for `git@github.com:dlifanov/devops_aws_sg_updater.git` (add your public key).
+- GitHub access for `git@github.com:dlifanov/devops_aws_sg_updater.git`Цр
 
 ## Usage
 ```bash

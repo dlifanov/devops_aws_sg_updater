@@ -1,0 +1,10 @@
+curl -I http://2bcloud.io
+HTTP/1.1 200 OK
+Server: nginx/1.28.0
+Date: Thu, 11 Dec 2025 16:31:39 GMT
+Content-Type: text/html
+Content-Length: 615
+Last-Modified: Tue, 12 Aug 2025 21:20:24 GMT
+Connection: keep-alive
+ETag: "689bb018-267"
+Accept-Ranges: bytes
